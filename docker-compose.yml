@@ -1,0 +1,23 @@
+services:
+
+  backend:
+    build: ./
+    volumes:
+      - ./public:/app/public
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      - db
+    links:
+      - db
+
+  db:
+    image: postgres:latest
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    ports:
+      - 5432:5433
+    environment:
+      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASS}"

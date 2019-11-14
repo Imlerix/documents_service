@@ -24,11 +24,11 @@ const route = {
         next()
     },
     async createDocType(req, res, next) {
-        await DocTypeModel.create({
+        let new_doctype = await DocTypeModel.create({
             name: req.body.name
         })
-        res.status(200).json();
-        next()
+
+        res.status(200).json({status: 'success', new_doctype});
     },
 
 }

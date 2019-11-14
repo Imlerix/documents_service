@@ -6,14 +6,15 @@ const {
 
 const create = {
     async check (req, res, next){
-        let type_name = req.body.name = req.body.name[0].toUpperCase() + req.body.name.slice(1).toLowerCase()
-        if (type_name){
+        if (req.body.name) {
+            let type_name = req.body.name = req.body.name[0].toUpperCase() + req.body.name.slice(1).toLowerCase()
+
             let docType = await DocTypeModel.findOne({where: {name: type_name}});
-            if (docType) res.status(412).send({error: 'Такой тип уже существует'})
-        } else {
-            res.status(412).send({error: 'Не передано имя типа'})
+            if (docType) res.status(412).json({error: 'Такой тип уже существует'})
+
+            next()
         }
-        next()
+        // res.status(412).send({error: 'Не передано имя типа'})
     }
 }
 

@@ -1,0 +1,37 @@
+{
+  "name": "documents_service",
+  "version": "1.0.0",
+  "description": "Семестровая работа по проектированию веб-сервисов на Node.js, Express, Postrgres, Sequelize and Docker",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Imlerix/documents_service.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^3.0.6",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "dotenv-flow": "^3.0.0",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1",
+    "nodemon": "^1.18.11",
+    "pg": "*",
+    "sequelize": "^5.12.3"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-http": "^4.3.0",
+    "chai-like": "^1.1.1",
+    "chai-things": "^0.2.0",
+    "mocha": "^6.2.2"
+  },
+  "bugs": {
+    "url": "https://github.com/Imlerix/documents_service/issues"
+  },
+  "homepage": "https://github.com/Imlerix/documents_service#readme"
+}

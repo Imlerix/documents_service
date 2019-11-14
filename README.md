@@ -1,4 +1,4 @@
-# documents_service
+# About
 Семестровая работа по проектированию веб-сервисов на Node.js, Express, Postrgres, Sequelize and Docker
 
 # Documentation

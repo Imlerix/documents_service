@@ -20,7 +20,7 @@ const start = async () => {
     try {
         let server = http.createServer(app);
         await sequelize.sync(
-                {force: true}
+                {force: process.env.DEV}
             );
         console.log(`Sequelize is ready to work with "${process.env.DB_NAME}" database...`);
         await seedDB();

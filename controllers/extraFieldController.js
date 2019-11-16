@@ -48,7 +48,7 @@ const route = {
             let extrafield = await getByNameFromDoc(extra_name, doctype.id);
             if (!extrafield) {
                 let new_extrafield = await create(extra_name, doctype.id)
-                res.status(200).json({status: 'success', newExtra});
+                res.status(200).json({status: 'success', new_extrafield});
                 next()
             } else {
                 res.status(404).json({error: 'Доп поле уже существует', extrafield});

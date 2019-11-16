@@ -41,7 +41,7 @@ const createForUser = async function({doctype_id, person_id, date_destroy, city_
     })
 }
 
-const getDeep = async function(document_id, person_id) {
+const getDeep = async function(document_id, person_id) { // TODO Переделать на получение через doctype_id
     let document = await getById(document_id);
     let doctype = await docTypesController.getById(document.doctype_id);
     let extrafields = await extraFieldController.getAllById(doctype.id);

@@ -1,5 +1,4 @@
-const Sequelize = require('sequelize');
-const sequelize = require('../lib/db');
+const errors = require('../errors')
 const docTypesController = require("./docTypesController");
 const userFieldController = require("./userFieldController");
 const {
@@ -36,54 +35,134 @@ const create = async function (field_name, doctype_id) {
     })
 }
 
+const destroy = async function (field_name, doctype_id) {
+    return await ExtrafieldModel.destroy({
+        name: field_name,
+        doctype_id: doctype_id
+    })
+}
+
+const destroyAllForDoctype = async function (doctype_name, fields) {
+    try {
+        if (!doctype_name) throw new errors.common.BodyParseError(null, false)
+
+        let doctype = await docTypesController.getByName(doctype_name);
+        if (!doctype) throw new errors.doctype.ExistDoctypeError();
+
+        await Promise.all(await fields.map(async (field) => {
+            let extraField = await getByNameFromDoc(field.name, doctype.id)
+            if(!extraField) throw new errors.extraField.ExistExtraFieldError()
+
+            await userFieldController.destroy({
+                where: {
+                    extrafield_id: extraField.id
+                }
+            })
+            await destroy(field.name, doctype.id)
+        }))
+    }catch (err) {
+        return err;
+    }
+}
+
 const route = {
     async createExtrafield(req, res, next) {
-        let {
-            doctype_name,
-            extra_name
-        } = req.body;
+        try {
+            let {
+                doctype_name,
+                extra_name
+            } = req.body;
 
-        let doctype = await docTypesController.getByName(doctype_name) /// TODO ВЫНЕСТИ В ВАЛИДАТОР!!!"""!!!!!
-        if (doctype) {
+            if (!doctype_name && !extra_name) throw new errors.common.BodyParseError(null, false)
+
+            let doctype = await docTypesController.getByName(doctype_name)
+            if (!doctype) throw new errors.doctype.ExistDoctypeError()
+
             let extrafield = await getByNameFromDoc(extra_name, doctype.id);
-            if (!extrafield) {
-                let new_extrafield = await create(extra_name, doctype.id)
-                res.status(200).json({status: 'success', new_extrafield});
-                next()
-            } else {
-                res.status(404).json({error: 'Доп поле уже существует', extrafield});
-            }
-        }
+            if (extrafield) throw new errors.extraField.ExistExtraFieldError(true)
 
-        res.status(404).json({error: 'Тип не найден', doctype});
+            let new_extrafield = await create(extra_name, doctype.id)
+            res.status(200).json({status: 'success', new_extrafield});
+            next()
+        }catch (err) {
+            err = {
+                error: err.name,
+                message: err.message
+            }
+
+            res.status(404).json(err)
+        }
     },
     async editExtraForPerson(req, res, next) {
-        let {
-            fields, // name, value
-            doctype_name,
-            person_id // переделать на запрос к БД Мешкова "Люди" по имени
-        } = req.body;
+        try {
+            let updatedDocuments;
+            let {
+                fields, // [{name, value}]
+                doctype_name,
+                person_id // переделать на запрос к БД Мешкова "Люди" по имени
+            } = req.body;
 
-        if (doctype_name && person_id) {
-            let doctype = await docTypesController.getByName(doctype_name); /// TODO ВЫНЕСТИ В ВАЛИДАТОР!!!"""!!!!!
-            if (doctype) {
-                let updatedDocuments
-                updatedDocuments = await Promise.all(await fields.map(async (field) => {
-                    let userField,
-                        extraField
-                    extraField = await getByNameFromDoc(field.name, doctype.id)
-                    extraField  ? (userField = await userFieldController.getById(extraField.id, person_id))
-                                : res.status(400).json({error: `Поля ${field.name} не существует`});
-                    userField && (await userFieldController.updateValue(extraField.id, person_id, field.value))
-                }))
-                res.status(200).json({status: 'success'});
-                next()
+            if (!doctype_name && !person_id) throw new errors.common.BodyParseError(null, false)
+
+            let doctype = await docTypesController.getByName(doctype_name);
+            if (!doctype) throw new errors.doctype.ExistDoctypeError();
+
+            updatedDocuments = await Promise.all(await fields.map(async (field) => {
+                let extraField = await getByNameFromDoc(field.name, doctype.id)
+                if(!extraField) throw new errors.extraField.ExistExtraFieldError()
+
+                return await userFieldController.updateValue(person_id, extraField.id, field.value)
+            }))
+
+            res.status(200).json({status: 'success'});
+            next()
+
+        }catch (err) {
+            console.log(err)
+            err = {
+                error: err.name,
+                message: err.message
             }
-            res.status(400).json({error: 'Такого doctype не существует'});
+            res.status(404).json(err)
         }
+    },
+    async deleteExtraFields(req, res, next) {
+        try {
+            let {
+                fields, // [{name, value}]
+                doctype_name,
+            } = req.body;
 
-        res.status(400).json({error: 'Параметры или поля неверно переданы'});
-    }
+            if (!doctype_name) throw new errors.common.BodyParseError(null, false)
+
+            let doctype = await docTypesController.getByName(doctype_name);
+            if (!doctype) throw new errors.doctype.ExistDoctypeError();
+
+            await Promise.all(await fields.map(async (field) => {
+                let extraField = await getByNameFromDoc(field.name, doctype.id)
+                if(!extraField) throw new errors.extraField.ExistExtraFieldError()
+
+                await userFieldController.destroy({
+                    where: {
+                        extrafield_id: extraField.id
+                    }
+                })
+                await destroy(field.name, doctype.id)
+            }))
+
+            res.status(200).json({status: 'success'});
+            next()
+
+        }catch (err) {
+            console.log(err)
+            err = {
+                error: err.name,
+                message: err.message
+            }
+            res.status(404).json(err)
+        }
+    },
+
 }
 
 module.exports = {
@@ -91,6 +170,7 @@ module.exports = {
     getAllById,
     getById,
     getByNameFromDoc,
+    destroyAllForDoctype,
     route
 }
 

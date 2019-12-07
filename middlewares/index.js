@@ -4,7 +4,7 @@ const corsOptions = {
     allowedHeaders: [ 'Content-Type', 'Authorization' ]
 }
 
-const logger = require('morgan')('dev');
+const logger = require('morgan')('combined');
 const customLogger = require('./logger');
 const bodyParserJson = require('body-parser').json();
 const bodyParserUrl = require('body-parser').urlencoded({extended: true});
@@ -13,9 +13,9 @@ const errors = require('./errors')
 
 module.exports = [
     logger,
-    customLogger,
     bodyParserJson,
     bodyParserUrl,
     cors,
+    customLogger,
     // errors
 ]

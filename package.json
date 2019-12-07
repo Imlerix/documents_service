@@ -2,9 +2,9 @@
   "name": "documents_service",
   "version": "1.0.0",
   "description": "Семестровая работа по проектированию веб-сервисов на Node.js, Express, Postrgres, Sequelize and Docker",
-  "main": "index.js",
+  "main": "App.js",
   "scripts": {
-    "start": "nodemon app.js"
+    "start": "nodemon App.js"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,8 @@
     "morgan": "^1.9.1",
     "nodemon": "^1.18.11",
     "pg": "*",
-    "sequelize": "^5.12.3"
+    "sequelize": "^5.12.3",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "chai": "^4.2.0",

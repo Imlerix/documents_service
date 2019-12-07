@@ -31,6 +31,10 @@ Log.init({
         type: Sequelize.TEXT,
         allowNull: true
     },
+    response_body: {
+        type: Sequelize.TEXT,
+        allowNull: true
+    },
     source: {
         type: Sequelize.TEXT,
         allowNull: true

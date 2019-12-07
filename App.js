@@ -6,15 +6,10 @@ const sequelize = require('./lib/db');
 const seedDB = require('./lib/db_seed');
 const middlewares = require('./middlewares');
 const routes = require('./routes');
-
 const app = express();
 
-middlewares.forEach(middleware =>
-    app.use(middleware)
-);
-routes.forEach(el =>
-    app.use(el.path, el.route)
-);
+middlewares.forEach(middleware => app.use(middleware));
+routes.forEach(el => app.use(el.path, el.route));
 
 const start = async () => {
     try {
@@ -23,7 +18,7 @@ const start = async () => {
                 {force: process.env.DEV}
             );
         console.log(`Sequelize is ready to work with "${process.env.DB_NAME}" database...`);
-        await seedDB();
+        // await seedDB();
         await server.listen(process.env.PORT);
         console.log(`Server is now running on port ${process.env.PORT} ...`)
     } catch (e) {
@@ -31,4 +26,4 @@ const start = async () => {
     }
 }
 
-start()
+start();

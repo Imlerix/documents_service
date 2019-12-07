@@ -7,12 +7,46 @@ const {
     UserFieldModel,
 } = require('../models');
 
+const logController = require('./logController')
 const docTypesController = require('./docTypesController')
 const extraFieldController = require('./extraFieldController')
 const userFieldController = require('./userFieldController')
+const errors = require('../errors');
 
 const getAll = async function() {
-    return await DocumentModel.findAll();
+    let attributes = [
+        'id',
+        'doctype_id',
+        'person_id',
+        'date_create',
+        'date_destroy',
+        'city_of_obtaining_id'
+    ]
+    return await DocumentModel.findAll({
+        attributes
+    });
+}
+
+const getAllForPerson = async function(person_id) {
+    let documents = await DocumentModel.findAll({
+        where: {
+            person_id
+        }
+    });
+    let documentsDeeped = await Promise.all( await documents.map(async (doc) => await getDeepInfoDoc(doc.doctype_id, person_id)))
+
+    return documentsDeeped;
+}
+
+const getAllForDoctype = async function(doctype_id) {
+    let documents = await DocumentModel.findAll({
+        where: {
+            doctype_id
+        }
+    });
+    let documentsDeeped = await Promise.all( await documents.map(async (doc) => await getDeepInfoDoc(doc.doctype_id, doc.person_id)))
+
+    return documentsDeeped;
 }
 
 const getById = async function(id) {
@@ -41,7 +75,7 @@ const createForUser = async function({doctype_id, person_id, date_destroy, city_
     })
 }
 
-const getDeep = async function(document_id, person_id) { // TODO Переделать на получение через doctype_id
+const getDeepInfoDoc = async function(document_id, person_id) {
     let document = await getById(document_id);
     let doctype = await docTypesController.getById(document.doctype_id);
     let extrafields = await extraFieldController.getAllById(doctype.id);
@@ -63,53 +97,142 @@ const getDeep = async function(document_id, person_id) { // TODO Передел�
     }
 }
 
+const searchByPerson = async function(person_id) {
+     return await getAllForPerson(person_id);
+}
+
 const route = {
     async getAllDocs(req, res, next) {
         let response = await getAll();
+        await logController.updateLogAfterResponse(req.logId, response);
         res.json(response);
         next()
     },
-    async getPersonDoc(req, res, next) {
-        let response = await getDeep(req.params.id, req.params.person_id);
-        res.json(response);
-        next()
+    async searchByQuery(req, res, next){
+        try{
+            let mapQuery = new Map(Object.entries(req.query)),
+                response;
+            if (mapQuery.size !== 1) throw new errors.common.QueryParamsError(null, mapQuery.size, true);
+            if (!req.query.doctype_name && !req.query.person_id) throw new errors.common.QueryParamsError();
+
+            response = req.query.person_id && await searchByPerson(req.query.person_id) || [];
+
+            if (req.query.doctype_name) {
+                let doctype = await docTypesController.getByName(req.query.doctype_name);
+                if (!doctype) throw new errors.doctype.ExistDoctypeError();
+                response = await getAllForDoctype(doctype.id) || []
+            }
+
+            await logController.updateLogAfterResponse(req.logId, response);
+            res.json(response);
+            next()
+        }catch (err) {
+            console.log(err)
+            err = {
+                error: err.name,
+                message: err.message
+            }
+            await logController.updateLogAfterResponse(req.logId, err);
+            res.status(404).json(err);
+        }
     },
     async addDocumentToPerson(req, res, next) {
-        let {
-            person_id,
-            doctype_name,
-            date_destroy,
-            city_of_obtaining_id
-        } = req.body;
-        if(person_id && doctype_name) {
+        try{
+            let {
+                person_id,
+                doctype_name,
+                date_destroy,
+                city_of_obtaining_id
+            } = req.body;
+
+            if(!person_id || !doctype_name) throw new errors.common.BodyParseError(null, false)
+
             let doctype = await docTypesController.getByName(doctype_name)
-            if (doctype) {
-                let document = await getByDoctypeForUser(doctype.name, person_id)
-                if (doctype && !document){
-                    let new_document = await createForUser({
-                        doctype_id: doctype.id,
-                        person_id,
-                        date_destroy,
-                        city_of_obtaining_id
-                    })
-                    if (new_document) res.status(200).json({status: 'success', new_document})
-                    else res.status(500).json({error: 'Не удалось создать документ'});
-                }
-                res.status(400).json({error: 'Документ уже существует у данного юзера'});
+            if (!doctype) throw new errors.doctype.ExistDoctypeError()
+
+            let document = await getByDoctypeForUser(doctype.name, person_id)
+            if (document) throw new errors.document.ExistDocError(true)
+
+            let new_document = await createForUser({
+                doctype_id: doctype.id,
+                person_id,
+                date_destroy,
+                city_of_obtaining_id
+            })
+
+            await logController.updateLogAfterResponse(req.logId, response);
+            if (new_document) res.status(200).json({status: 'success', new_document})
+            else throw new Error('Не удалось создать документ');
+
+            next()
+        }catch (err) {
+            err = {
+                error: err.name,
+                message: err.message
             }
-            res.status(400).json({error: 'Такого doctype не существует'})
+            await logController.updateLogAfterResponse(req.logId, err);
+            res.status(404).json(err);
         }
-        res.status(400).json({error: 'Неверно переданы поля'});
-        next()
+    },
+    async deleteDocument(req, res, next) {
+        try{
+            let {
+                person_id,
+                doctype_name,
+            } = req.body;
+            console.log(req.body)
+
+            if(!person_id || !doctype_name) throw new errors.common.BodyParseError(null, false)
+
+            let doctype = await docTypesController.getByName(doctype_name)
+            if (!doctype) throw new errors.doctype.ExistDoctypeError()
+
+            let document = await getByDoctypeForUser(doctype.name, person_id)
+            if (!document) throw new errors.document.ExistDocError()
+
+            await DocumentModel.destroy({
+                where: {
+                    doctype_id: doctype.id,
+                    person_id
+                }
+            })
+            let extraFields = await ExtrafieldModel.findAll({
+                where: {
+                    doctype_id: doctype.id,
+                    person_id
+                }
+            })
+            await Promise.all(await extraFields.map(async (extra) => {
+                await UserFieldModel.destroy({
+                    where: {
+                        extrafield_id: extra.id
+                    }
+                })
+            }))
+
+            res.status(200).json({status: 'success'})
+
+            next()
+        }catch (err) {
+            console.log(err)
+            err = {
+                error: err.name,
+                message: err.message
+            }
+            await logController.updateLogAfterResponse(req.logId, err);
+            res.status(404).json(err);
+        }
     },
 }
 
 module.exports = {
     getAll,
     getById,
-    getDeep,
+    getDeepInfoDoc,
     getByDoctypeForUser,
     createForUser,
+    getAllForDoctype,
+    getAllForPerson,
     route
 }
 

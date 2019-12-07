@@ -15,11 +15,15 @@ const MainLog = async function(req, res, next){
     const {
         statusCode
     } = res;
+
     params = JSON.stringify(params, null, 2);
     headers = JSON.stringify(headers, null, 2);
+    body = JSON.stringify(body, null, 2);
 
     try{
-        let log = await LogModel.create({
+        let log;
+        // if(path.indexOf('/logs') === -1)
+        log = await LogModel.create({
             req: path,
             method,
             status_code: statusCode,
@@ -28,10 +32,10 @@ const MainLog = async function(req, res, next){
             source: headers.toString(),
             created_at: Date.now()
         })
+        res.logId = log.id;
     } catch (e) {
         console.log(e)
     }
-
 
     next()
 }

@@ -104,7 +104,7 @@ const searchByPerson = async function(person_id) {
 const route = {
     async getAllDocs(req, res, next) {
         let response = await getAll();
-        await logController.updateLogAfterResponse(req.logId, response);
+        res.answer_body = response
         res.json(response);
         next()
     },
@@ -123,18 +123,18 @@ const route = {
                 response = await getAllForDoctype(doctype.id) || []
             }
 
-            await logController.updateLogAfterResponse(req.logId, response);
+            res.answer_body = response
             res.json(response);
-            next()
         }catch (err) {
             console.log(err)
             err = {
                 error: err.name,
                 message: err.message
             }
-            await logController.updateLogAfterResponse(req.logId, err);
+            res.answer_body = err
             res.status(404).json(err);
         }
+        next()
     },
     async addDocumentToPerson(req, res, next) {
         try{
@@ -160,19 +160,21 @@ const route = {
                 city_of_obtaining_id
             })
 
-            await logController.updateLogAfterResponse(req.logId, response);
-            if (new_document) res.status(200).json({status: 'success', new_document})
+            let answer_body = {status: 'success', new_document}
+            res.answer_body = answer_body
+            if (new_document) res.status(200).json(answer_body)
             else throw new Error('Не удалось создать документ');
 
-            next()
+
         }catch (err) {
             err = {
                 error: err.name,
                 message: err.message
             }
-            await logController.updateLogAfterResponse(req.logId, err);
+            res.answer_body = err
             res.status(404).json(err);
         }
+        next()
     },
     async deleteDocument(req, res, next) {
         try{
@@ -210,18 +212,20 @@ const route = {
                 })
             }))
 
-            res.status(200).json({status: 'success'})
+            let answer_body = {status: 'success'}
+            res.answer_body = answer_body
+            res.status(200).json(answer_body)
 
-            next()
         }catch (err) {
             console.log(err)
             err = {
                 error: err.name,
                 message: err.message
             }
-            await logController.updateLogAfterResponse(req.logId, err);
+            res.answer_body = err
             res.status(404).json(err);
         }
+        next()
     },
 }
 

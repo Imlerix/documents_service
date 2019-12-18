@@ -1,7 +1,7 @@
+const Sequelize = require('sequelize');
+const sequelize = require('../lib/db');
+
 const errors = require('../errors')
-const documentController = require('./documentController')
-const extraFieldController = require('./extraFieldController')
-const logController = require("./logController");
 const {
     ExtrafieldModel,
     UserFieldModel,
@@ -34,8 +34,7 @@ const route = {
     async getAllTypes(req, res, next) {
         let response = await getAll();
 
-        console.log(req.logId)
-        await logController.updateLogAfterResponse(req.logId, response);
+        res.answer_body = response
         res.json(response);
         next()
     },
@@ -48,18 +47,20 @@ const route = {
 
             let new_doctype = await create(req.body.name)
 
-            await logController.updateLogAfterResponse(req.logId, new_doctype);
-            res.status(200).json({status: 'success', new_doctype});
-            next()
+            let answer_body = {status: 'success', new_doctype}
+            res.answer_body = answer_body
+            res.status(200).json(answer_body);
+
         }catch (e) {
             e = {
                 error: e.name,
                 message: e.message
             }
 
-            await logController.updateLogAfterResponse(req.logId, err);
+            res.answer_body = err;
             res.status(404).json(e)
         }
+        next()
     },
     async deleteDocType(req, res, next) {
         try{
@@ -83,17 +84,18 @@ const route = {
                 })
             }))
 
-            res.status(200).json({status: 'success'});
-            next()
+            let answer_body = {status: 'success'}
+            res.answer_body = answer_body
+            res.status(200).json(answer_body);
         }catch (e) {
             e = {
                 error: e.name,
                 message: e.message
             }
-
-            await logController.updateLogAfterResponse(req.logId, err);
+            res.answer_body = err;
             res.status(404).json(e)
         }
+        next()
     },
 
 }

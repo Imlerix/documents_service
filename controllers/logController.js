@@ -30,16 +30,20 @@ const route = {
                     method
                 }
             }
-            let response = await getAll(options)
+            let response = await getAll(options);
+            res.answer_body = response;
             res.json(response);
-            next()
+
         }catch (err) {
             err = {
                 error: err.name,
                 message: err.message
             }
-            res.status(404).json(err)
+            res.answer_body = err;
+            res.status(404).json(err);
         }
+
+        next()
     },
 }
 

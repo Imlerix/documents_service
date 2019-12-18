@@ -25,11 +25,15 @@ const create = async function (person_id, extrafield_id) {
     })
 }
 
-const destroy = async function (person_id, extrafield_id) {
-    return await UserFieldModel.destroy({
-        person_id,
-        extrafield_id
+const destroy = async function (extrafield_id) {
+    let userFields = UserFieldModel.findAll({
+        where: extrafield_id
     })
+
+    if (userFields.length)
+        await UserFieldModel.destroy({
+            where: {extrafield_id}
+        })
 }
 
 const updateValue = async function (person_id, extrafield_id, value) {

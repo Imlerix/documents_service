@@ -16,6 +16,6 @@ module.exports = [
     bodyParserJson,
     bodyParserUrl,
     cors,
-    customLogger,
+    // customLogger,
     // errors
 ]

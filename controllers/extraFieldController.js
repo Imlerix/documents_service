@@ -3,7 +3,8 @@ const docTypesController = require("./docTypesController");
 const userFieldController = require("./userFieldController");
 const {
     ExtrafieldModel,
-    DocTypeModel
+    DocTypeModel,
+    UserFieldModel
 } = require('../models');
 
 const getAll = async function () {
@@ -37,14 +38,17 @@ const create = async function (field_name, doctype_id) {
 
 const destroy = async function (field_name, doctype_id) {
     return await ExtrafieldModel.destroy({
-        name: field_name,
-        doctype_id: doctype_id
+        where: {
+            name: field_name,
+            doctype_id: doctype_id
+        }
     })
 }
 
 const destroyAllForDoctype = async function (doctype_name, fields) {
     try {
         if (!doctype_name) throw new errors.common.BodyParseError(null, false)
+
 
         let doctype = await docTypesController.getByName(doctype_name);
         if (!doctype) throw new errors.doctype.ExistDoctypeError();
@@ -82,16 +86,20 @@ const route = {
             if (extrafield) throw new errors.extraField.ExistExtraFieldError(true)
 
             let new_extrafield = await create(extra_name, doctype.id)
-            res.status(200).json({status: 'success', new_extrafield});
-            next()
+
+            let answer_body = {status: 'success', new_extrafield}
+            res.answer_body = answer_body
+            res.status(200).json(answer_body);
+
         }catch (err) {
             err = {
                 error: err.name,
                 message: err.message
             }
-
+            res.answer_body = err;
             res.status(404).json(err)
         }
+        next()
     },
     async editExtraForPerson(req, res, next) {
         try {
@@ -114,8 +122,10 @@ const route = {
                 return await userFieldController.updateValue(person_id, extraField.id, field.value)
             }))
 
-            res.status(200).json({status: 'success'});
-            next()
+            let answer_body = {status: 'success'}
+            res.answer_body = answer_body
+            res.status(200).json(answer_body);
+
 
         }catch (err) {
             console.log(err)
@@ -123,8 +133,11 @@ const route = {
                 error: err.name,
                 message: err.message
             }
+
+            res.answer_body = err
             res.status(404).json(err)
         }
+        next()
     },
     async deleteExtraFields(req, res, next) {
         try {
@@ -138,29 +151,33 @@ const route = {
             let doctype = await docTypesController.getByName(doctype_name);
             if (!doctype) throw new errors.doctype.ExistDoctypeError();
 
+            let wrongFields = []
+
             await Promise.all(await fields.map(async (field) => {
                 let extraField = await getByNameFromDoc(field.name, doctype.id)
-                if(!extraField) throw new errors.extraField.ExistExtraFieldError()
+                // if(!extraField) throw new errors.extraField.ExistExtraFieldError()
+                if(!extraField) {
+                    wrongFields.push(field);
+                    return;
+                }
 
-                await userFieldController.destroy({
-                    where: {
-                        extrafield_id: extraField.id
-                    }
-                })
+                await userFieldController.destroy(extraField.id)
                 await destroy(field.name, doctype.id)
             }))
 
-            res.status(200).json({status: 'success'});
-            next()
+            let answer_body = {status: 'success', wrongFields}
+            res.answer_body = answer_body
+            res.status(200).json(answer_body);
 
         }catch (err) {
-            console.log(err)
             err = {
                 error: err.name,
                 message: err.message
             }
+            res.answer_body = err;
             res.status(404).json(err)
         }
+        next()
     },
 
 }
